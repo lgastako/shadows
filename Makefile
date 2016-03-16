@@ -1,0 +1,3 @@
+help:
+	@cat Makefile
+
