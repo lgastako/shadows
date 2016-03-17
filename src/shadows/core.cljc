@@ -5,7 +5,11 @@
   (log/debug ::select-with-rename {:m m :mappings mappings})
   (if-not mappings
     nil
-    (let [m (select-keys m (keys mappings))]
+    (let [keyseq  (->> mappings
+                       (mapv keys)
+                       flatten
+                       vec)
+          m       (select-keys m keyseq)]
       (into {}
             (for [mapping mappings]
               (do
