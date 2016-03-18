@@ -30,3 +30,6 @@
                  (select-with-rename m mappings))]
       (log/debug ::from :result result)
       result)))
+
+(defn merge-from [m1 m2 morks]
+  (merge m1 (from m2 morks)))
