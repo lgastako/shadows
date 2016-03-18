@@ -1,7 +1,8 @@
 (ns shadows.snapshots)
 
 (defprotocol Snapshotter
-  (snapshot [this snapshot]))
+  (restore [this agg agg-key])
+  (snapshot [this agg agg-key snapshot]))
 
 (defn make-snapshotted [f snapshotter should-snapshot?]
   ;; TODO: we need to do per-agg-key snapshots, no?
