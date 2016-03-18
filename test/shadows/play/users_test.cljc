@@ -105,6 +105,12 @@
       (is (= nil
              (users/event->username create-john-event :zorp))))))
 
+
+;; XXX
+;; The problem? with both of the following approaches in that they build up
+;; (potentially) huge user and mailboxes tables per projection instead of
+;; individual per-instance projections/aggregates.
+
 (deftest test-users-mm
   (let [state (reduce mm-users/users {} events)]
     ;; (log/warn ::test-users-mm {:state state})
