@@ -3,6 +3,8 @@
                :cljs [cljs.test    :refer-macros [are deftest is testing]])
             [its.log :as log]
             [shadows.play.users :as users]
+            [shadows.play.users.fn :as fn-users]
+            [shadows.play.users.mm :as mm-users]
             [shadows.ids :as ids]))
 
 (def create-john-event
@@ -22,23 +24,38 @@
    :event/data {:username "john"
                 :bcrypt-pwhash "secret2"}})
 
+(def msg-1
+  {:to "john"
+   :from "bill"
+   :subject "yo"
+   :body "what it do, kid?"})
+
 (def msg-1-event
   {:event/id (ids/gen)
    :event/type :msg/Sent
-   :event/data {:to "john"
-                :from "bill"}})
+   :event/data msg-1})
+
+(def msg-2
+  {:to "bill"
+   :from "john"
+   :subject "re: yo"
+   :body "no much, what's good, fam?"})
 
 (def msg-2-event
   {:event/id (ids/gen)
    :event/type :msg/Sent
-   :event/data {:to "bill"
-                :from "john"}})
+   :event/data msg-2})
+
+(def msg-3
+  {:to "john"
+   :from "bill"
+   :subject "re: re: yo"
+   :body "..."})
 
 (def msg-3-event
   {:event/id (ids/gen)
    :event/type :msg/Sent
-   :event/data {:to "john"
-                :from "bill"}}  )
+   :event/data msg-3})
 
 (def events
   [create-john-event
@@ -47,6 +64,22 @@
    change-password-2-event
    msg-2-event
    msg-3-event])
+
+(def expected-users
+  {:users/by-username {"john" {:username "john"
+                               :bcrypt-pwhash "secret2"
+                               :msgs/received 2
+                               :msgs/sent 1}
+                       "bill" {:msgs/sent 2
+                               :msgs/received 1}}})
+
+(def expected-mailboxes
+  {:mailboxes/by-username {"john" {:inbox [msg-1
+                                           msg-3]
+                                   :outbox [msg-2]}
+                           "bill" {:inbox [msg-2]
+                                   :outbox [msg-1
+                                            msg-3]}}})
 
 (deftest test-event->username
 
@@ -72,24 +105,26 @@
       (is (= nil
              (users/event->username create-john-event :zorp))))))
 
-(def expected-users
-  {:users/by-username {"john" {:username "john"
-                               :bcrypt-pwhash "secret2"
-                               :msgs/received 2
-                               :msgs/sent 1}
-                       "bill" {:msgs/sent 2
-                               :msgs/received 1}}})
-
 (deftest test-users-mm
-  (let [state (reduce users/users {} events)]
+  (let [state (reduce mm-users/users {} events)]
     ;; (log/warn ::test-users-mm {:state state})
     (is (= expected-users
            state))))
 
-(deftest test-project-user-factory
-  (let [state (reduce users/project-users {} events)]
+(deftest test-project-user
+  (let [state (reduce fn-users/project-users {} events)]
     ;; (log/warn ::test-project-user-factory {:state state})
     (is (= expected-users
+           state))))
+
+(deftest test-mailboxes-mm
+  (let [state (reduce mm-users/mailboxes {} events)]
+    (is (= expected-mailboxes
+           state))))
+
+(deftest test-project-mailboxes
+  (let [state (reduce fn-users/project-mailboxes {} events)]
+    (is (= expected-mailboxes
            state))))
 
 ;; (log/set-level! :warn)
