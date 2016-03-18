@@ -139,8 +139,10 @@
     (is (= expected-mailboxes
            state))))
 
+(test-users-pa)
+
 ;; (log/set-level! :warn)
 ;; (log/set-level! :debug)
 
 ;; (test-project-user-factory)
-(run-tests)
+;; (run-tests)

@@ -6,20 +6,31 @@
 
 (defn aggregate-projecton [get-agg-fn get-agg-keys assoc-agg-fn update-agg-fn]
   (fn [state event]
-    (log/warn :aggregate-project :fn)
+    ;; (log/debug :aggregate-project {:state state :event event})
     (letfn [(f [state agg-key]
-              (log/warn :executing :agg-key agg-key)
+              (log/debug :aggregate-project :f :executing {:agg-key agg-key
+                                                           :update-agg-fn update-agg-fn})
               (let [aggregate  (get-agg-fn state agg-key)
-                    aggregate' (update aggregate update-agg-fn event)]
-                (assoc-agg-fn state aggregate')))]
+                    _          (log/debug :executing {:on event})
+                    aggregate' (update-agg-fn aggregate event)]
+                (log/debug :aggregate-project :f :aggregate' aggregate')
+                (assoc-agg-fn state agg-key aggregate')))]
       (let [agg-keys (get-agg-keys event)
             agg-keys (if (sequential? agg-keys)
                        agg-keys
                        [agg-keys])]
-        (log/warn :agg-keys agg-keys)
-        (reduce state f agg-keys)))))
+        ;; (log/debug :aggregate-project :pre-reduce {:agg-keys agg-keys})
+        (let [result
+              (reduce f state agg-keys)]
+          (log/debug :aggregate-project {:result result})
+          result)))))
 
-(defmulti user (fn [_ event] (:event/type event)))
+(defmulti user
+  "Update the user aggregate."
+  (fn [_ event]
+    (let [result (:event/type event)]
+      (log/debug :pa/user {:result result :event event})
+      result)))
 
 (defmethod user :default
   [user event]
@@ -36,19 +47,17 @@
 
 (defmethod user :msg/Sent
   [user event]
-  (let [to         (users/event->username event :to)
-        from       (users/event->username event :from)
-        username   (:username user)
-        target     (if (= to username)
-                     to
-                     from)
-        field      (if (= to username)
-                     :msgs/received
-                     :msgs/sent)]
-    (users/assoc-user target
-                      (update user
-                              field
-                              (fnil inc 0)))))
+  (let [to       (users/event->username event :to)
+        from     (users/event->username event :from)
+        field    (case (:username user)
+                   to   :msgs/received
+                   from :msgs/sent)]
+    (log/debug ::user :msg/Sent {:to to
+                                 :from from
+                                 :field field})
+    (if-not field
+      user
+      (update user field (fnil inc 0)))))
 
 (letfn [(get-agg-fn [state agg-key]
           (get-in state [:users/by-username (:username agg-key)]))
@@ -58,17 +67,12 @@
                   [{:username (get-in event [:event/data :to])}
                    {:username (get-in event [:event/data :from])}]
                   {:username (get-in event [:event/data :username])})]
-            ;; (log/warn :get-agg-keys {:result result :event event})
+            ;; (log/debug :get-agg-keys {:result result :event event})
             result))
         (assoc-agg-fn [state agg-key agg]
-          (assoc-in state [:users/by-username (:username agg-key)] agg))
-        (update-agg-fn [agg event]
-          (let [result
-                (user agg event)]
-            (log/warn :update-agg-fn {:agg agg :event event :result result})
-            result))]
+          (assoc-in state [:users/by-username (:username agg-key)] agg))]
   (def project-user-aggregate
     (aggregate-projecton get-agg-fn
                          get-agg-keys
                          assoc-agg-fn
-                         update-agg-fn)))
+                         user)))
