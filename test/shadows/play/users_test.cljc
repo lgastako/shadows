@@ -5,6 +5,7 @@
             [shadows.play.users :as users]
             [shadows.play.users.fn :as fn-users]
             [shadows.play.users.mm :as mm-users]
+            [shadows.play.users.pa :as pa-users]
             [shadows.ids :as ids]))
 
 (def create-john-event
@@ -117,9 +118,14 @@
     (is (= expected-users
            state))))
 
-(deftest test-project-user
+(deftest test-project-user-fn
   (let [state (reduce fn-users/project-users {} events)]
     ;; (log/warn ::test-project-user-factory {:state state})
+    (is (= expected-users
+           state))))
+
+(deftest test-users-pa
+  (let [state (reduce pa-users/project-user-aggregate {} events)]
     (is (= expected-users
            state))))
 
@@ -128,7 +134,7 @@
     (is (= expected-mailboxes
            state))))
 
-(deftest test-project-mailboxes
+(deftest test-project-mailboxes-fn
   (let [state (reduce fn-users/project-mailboxes {} events)]
     (is (= expected-mailboxes
            state))))
